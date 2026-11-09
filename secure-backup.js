@@ -3,7 +3,6 @@
 const $=id=>document.getElementById(id);
 const dataKey='medware_ndf_v1';
 const lastKey='medware_ndf_last_secure_backup_v10';
-const JAWAZ_KEY='medware_ndf_jawaz_v11';
 const status=$('backupStatus');
 const encoder=new TextEncoder();const decoder=new TextDecoder();
 const b64=bytes=>btoa(Array.from(bytes,b=>String.fromCharCode(b)).join(''));
@@ -14,7 +13,6 @@ function validate(x){
  if(!x.missions.every(m=>isObj(m)&&typeof m.id==='string'&&typeof m.date==='string'))throw Error('Missions invalides');
  if(x.customCities!==undefined&&(!Array.isArray(x.customCities)||!x.customCities.every(v=>typeof v==='string')))throw Error('Villes invalides');
  if(x.customRoutes!==undefined&&!isObj(x.customRoutes))throw Error('Distances invalides');
- if(x.jawazPassages!==undefined&&(!Array.isArray(x.jawazPassages)||x.jawazPassages.length>200000))throw Error('Passages Jawaz invalides');
  return x;
 }
 async function derive(pass,salt){
@@ -24,7 +22,7 @@ async function derive(pass,salt){
 function snapshot(){
  const state=JSON.parse(localStorage.getItem(dataKey)||'null');
  const x=isObj(state)?state:{missions:[],months:{},rate:3.3};
- return validate({...x,customCities:JSON.parse(localStorage.getItem(CUSTOM_CITY_KEY)||'[]'),customRoutes:JSON.parse(localStorage.getItem(CUSTOM_ROUTE_KEY)||'{}'),jawazPassages:JSON.parse(localStorage.getItem(JAWAZ_KEY)||'[]')});
+ return validate({...x,customCities:JSON.parse(localStorage.getItem(CUSTOM_CITY_KEY)||'[]'),customRoutes:JSON.parse(localStorage.getItem(CUSTOM_ROUTE_KEY)||'{}')});
 }
 function downloadBackup(name,content){const blob=new Blob([JSON.stringify(content)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);}
 function refreshStatus(){const date=localStorage.getItem(lastKey);status.textContent=date?'Dernière sauvegarde chiffrée préparée : '+new Date(date).toLocaleString('fr-FR')+'. Vérifie que le fichier est bien téléchargé et copié ailleurs.':'Aucune sauvegarde chiffrée préparée sur cet appareil.';}
@@ -62,14 +60,13 @@ $('file').addEventListener('change',async e=>{
    }catch(err){throw Error('Mot de passe incorrect ou fichier endommagé');}
   }else{data=validate(obj);}
   if(!confirm('Attention : restaurer ce fichier REMPLACERA les missions, avances, villes et distances actuellement enregistrées sur cet appareil. Avant de continuer, crée une sauvegarde de tes données actuelles. Continuer ?'))return;
-  const core={...data};delete core.customCities;delete core.customRoutes;delete core.jawazPassages;
+  const core={...data};delete core.customCities;delete core.customRoutes;
   const cities=Array.isArray(data.customCities)?data.customCities:[];
   const routes=isObj(data.customRoutes)?data.customRoutes:{};
-  const jawaz=Array.isArray(data.jawazPassages)?data.jawazPassages:[];
-  const original={core:localStorage.getItem(dataKey),cities:localStorage.getItem(CUSTOM_CITY_KEY),routes:localStorage.getItem(CUSTOM_ROUTE_KEY),jawaz:localStorage.getItem(JAWAZ_KEY)};
+  const original={core:localStorage.getItem(dataKey),cities:localStorage.getItem(CUSTOM_CITY_KEY),routes:localStorage.getItem(CUSTOM_ROUTE_KEY)};
   try{
-   localStorage.setItem(dataKey,JSON.stringify(core));localStorage.setItem(CUSTOM_CITY_KEY,JSON.stringify(cities));localStorage.setItem(CUSTOM_ROUTE_KEY,JSON.stringify(routes));localStorage.setItem(JAWAZ_KEY,JSON.stringify(jawaz));
-  }catch(err){for(const [k,v] of [[dataKey,original.core],[CUSTOM_CITY_KEY,original.cities],[CUSTOM_ROUTE_KEY,original.routes],[JAWAZ_KEY,original.jawaz]]){if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,v);}throw err;}
+   localStorage.setItem(dataKey,JSON.stringify(core));localStorage.setItem(CUSTOM_CITY_KEY,JSON.stringify(cities));localStorage.setItem(CUSTOM_ROUTE_KEY,JSON.stringify(routes));
+  }catch(err){for(const [k,v] of [[dataKey,original.core],[CUSTOM_CITY_KEY,original.cities],[CUSTOM_ROUTE_KEY,original.routes]]){if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,v);}throw err;}
   alert('Restauration terminée. La page va se recharger.');location.reload();
  }catch(err){alert('Restauration impossible : '+err.message);}finally{e.target.value='';$('backupPass').value='';$('backupPass2').value='';}
 });
